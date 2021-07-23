@@ -1,5 +1,6 @@
-FROM ubuntu:latest
-
+################################
+FROM ubuntu:latest AS prebuild
+################################
 WORKDIR /home/app
 
 ARG NB_USER=jovyan
@@ -7,46 +8,70 @@ ARG NB_UID=1000
 ENV USER ${NB_USER}
 ENV NB_UID ${NB_UID}
 ENV HOME /home/${NB_USER}
-
+ENV DEBIAN_FRONTEND noninteractive
 
 RUN adduser --disabled-password \
     --gecos "Default user" \
     --uid ${NB_UID} \
     ${NB_USER}
-    
-RUN apt-get update
-RUN apt-get update
-RUN apt-get install -y software-properties-common
-RUN apt-get update && apt-get -y install python3 python3-distutils python3-tk libpython3-dev libxmu-dev tk-dev tcl-dev cmake git g++ libglu1-mesa-dev liblapacke-dev
 
-RUN add-apt-repository universe
-# RUN add-apt-repository ppa:ngsolve/nightly -y
-# RUN apt-get install ngsolve -y
-RUN apt-get install npm nodejs -y
-        
-RUN apt-get install vim emacs -y
-RUN apt-get install -y cmake git python3-pip
+
+RUN apt-get update
+#RUN apt-get install -y software-properties-common
+#RUN apt-get update
+RUN apt-get install -y python3 python3-distutils libpython3-dev python3-pip
+RUN apt-get install -y python3-tk 
+RUN apt-get install -y tk-dev
+RUN apt-get install -y tcl-dev
+RUN apt-get install -y git liblapacke-dev 
+RUN apt-get install -y npm nodejs
+RUN apt-get install -y cmake g++
+# RUN apt-get install -y libglu1-mesa-dev libxmu-dev
+
+ENV DEBIAN_FRONTEND=
+
+# RUN apt-get install vim emacs -y
 RUN pip3 install --no-cache-dir notebook==5.*
-RUN pip3 install --no-cache-dir jupyterlab
+#RUN pip3 install --no-cache-dir jupyterlab
 RUN pip3 install --no-cache-dir numpy scipy matplotlib
 RUN pip3 install --no-cache-dir ipywidgets
 RUN pip3 install --no-cache-dir psutil pytest
-
 
 RUN chown -R ${NB_UID} ${HOME}
 USER ${NB_USER}
 WORKDIR ${HOME}
 RUN mkdir ngsuite
+
+################################
+FROM prebuild AS build
+################################
+
+ENV NGS_VER v6.2.2104
+
 WORKDIR ${HOME}/ngsuite
 RUN git clone https://github.com/NGSolve/ngsolve.git ngsolve-src
 WORKDIR ${HOME}/ngsuite/ngsolve-src
-RUN git checkout v6.2.2104
+RUN git checkout ${NGS_VER}
 RUN git submodule update --init --recursive
 RUN mkdir ../ngsolve-build
+
+
 WORKDIR ${HOME}/ngsuite/ngsolve-build
-RUN cmake -DCMAKE_INSTALL_PREFIX=${HOME}/ngsuite/ngsolve-inst ../ngsolve-src 
-RUN make -j15
+
+RUN cmake -DUSE_GUI=OFF -DCMAKE_INSTALL_PREFIX=${HOME}/ngsuite/ngsolve-inst ../ngsolve-src 
+RUN make -j8
 RUN make install
+WORKDIR ${HOME}/ngsuite
+RUN cp -r ${HOME}/ngsuite/ngsolve-src/docs/i-tutorials ${HOME}
+RUN rm -rf ngsolve-build
+RUN rm -rf ngsolve-src
+
+################################
+FROM prebuild AS postbuild
+################################
+
+COPY --from=build ${HOME}/ngsuite/ngsolve-inst ${HOME}/ngsuite/ngsolve-inst
+
 ENV NETGENDIR ${HOME}/ngsuite/ngsolve-inst/bin
 ENV PATH ${HOME}/ngsuite/ngsolve-inst/bin:${PATH}
 # RUN export PYTHONPATH_TMP=`python3 -c "from distutils.sysconfig import get_python_lib; print(get_python_lib(1,0,''))"`
