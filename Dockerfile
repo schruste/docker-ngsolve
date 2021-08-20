@@ -58,9 +58,16 @@ RUN mkdir ../ngsolve-build
 
 WORKDIR ${HOME}/ngsuite/ngsolve-build
 
-RUN cmake -DUSE_GUI=OFF -DCMAKE_INSTALL_PREFIX=${HOME}/ngsuite/ngsolve-inst ../ngsolve-src 
+RUN cmake -DUSE_GUI=OFF -DUSE_NATIVE_ARCH=OFF -DCMAKE_INSTALL_PREFIX=${HOME}/ngsuite/ngsolve-inst ../ngsolve-src 
 RUN make -j8
 RUN make install
+WORKDIR ${HOME}/ngsuite/ngsolve-build/ngsolve
+
+#ENV NETGENDIR ${HOME}/ngsuite/ngsolve-inst/bin
+#ENV PATH ${HOME}/ngsuite/ngsolve-inst/bin:${PATH}
+#ENV PYTHONPATH ${HOME}/ngsuite/ngsolve-inst/lib/python3/dist-packages:${PYTHONPATH}
+#RUN CTEST_OUTPUT_ON_FAILURE=1 ctest -v
+
 WORKDIR ${HOME}/ngsuite
 RUN cp -r ${HOME}/ngsuite/ngsolve-src/docs/i-tutorials ${HOME}
 RUN rm -rf ngsolve-build
