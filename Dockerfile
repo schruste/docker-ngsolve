@@ -46,12 +46,12 @@ RUN mkdir ngsuite
 FROM prebuild AS build
 ################################
 
-ENV NGS_VER v6.2.2104
+ENV NGS_VER master
 
 WORKDIR ${HOME}/ngsuite
 RUN git clone https://github.com/NGSolve/ngsolve.git ngsolve-src
 WORKDIR ${HOME}/ngsuite/ngsolve-src
-RUN git checkout ${NGS_VER}
+RUN git checkout master
 RUN git submodule update --init --recursive
 RUN mkdir ../ngsolve-build
 
