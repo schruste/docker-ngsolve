@@ -15,15 +15,17 @@ RUN adduser --disabled-password \
 
 RUN apt-get update
 RUN apt-get update
-# RUN apt-get install -y software-properties-common
-# RUN add-apt-repository universe
-# RUN add-apt-repository ppa:ngsolve/nightly -y
-# RUN apt-get install ngsolve -y
+RUN apt-get install -y software-properties-common
+RUN add-apt-repository universe
+
+ARG DEBIAN_FRONTEND=noninteractive
+
+RUN add-apt-repository ppa:ngsolve/nightly -y
+RUN apt-get install ngsolve -y
 RUN apt-get install npm nodejs -y
         
-# RUN apt-get install vim emacs -y
-RUN apt-get install -y git python3-pip
-RUN pip3 install --no-cache-dir ngsolve
+RUN apt-get install vim emacs -y
+RUN apt-get install -y cmake git python3-pip
 RUN pip3 install --no-cache-dir notebook==5.*
 RUN pip3 install --no-cache-dir jupyterlab
 RUN pip3 install --no-cache-dir numpy scipy matplotlib
@@ -34,6 +36,7 @@ RUN chown -R ${NB_UID} ${HOME}
 USER ${NB_USER}
 
 RUN pip3 install --user webgui_jupyter_widgets
+RUN pip3 install --user mkl
 RUN jupyter nbextension install --user --py webgui_jupyter_widgets
 RUN jupyter nbextension enable --user --py webgui_jupyter_widgets
         
@@ -47,9 +50,11 @@ RUN chmod +x /usr/bin/tini
 ENTRYPOINT ["/usr/bin/tini", "--"]
 USER ${NB_USER}
 
+ENV LD_LIBRARY_PATH "${LD_LIBRARY_PATH}:/usr/local/lib/:/home/jovyan/.local/lib/"
+ENV PATH "${PATH}:/home/jovyan/.local/bin"
+
 WORKDIR /home/${NB_USER}
-ENV PYTHONPATH "${PYTHONPATH}:/usr/local/lib/python3.10/site-packages"
-ENV LD_LIBRARY_PATH "${LD_LIBRARY_PATH}:/usr/local/lib/"
 RUN python3 -c "import ngsolve"   
+
 
 CMD ["jupyter", "notebook", "--port=8888", "--no-browser", "--ip=0.0.0.0", "--allow-root" ]
